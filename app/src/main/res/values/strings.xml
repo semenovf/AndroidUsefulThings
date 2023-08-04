@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">UnifiedContentProvider</string>
+    <string name="provider_title">Unified Content Provider</string>
+    <string name="provider_description">Unified content provider</string>
+
+    <string name="open_file_button">Open File</string>
+</resources>
