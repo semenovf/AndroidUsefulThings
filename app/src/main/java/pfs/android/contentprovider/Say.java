@@ -11,8 +11,6 @@ package pfs.android.contentprovider;
 import android.util.Log;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-
 public final class Say
 {
     private static String _pattern = "%s";
