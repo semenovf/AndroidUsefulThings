@@ -1,64 +1,75 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2023 Vladislav Trifochkin
+//
+// This file is part of `Android support library`.
+//
+// Changelog:
+//      2023.07.31 Initial version.
+////////////////////////////////////////////////////////////////////////////////
 package pfs.android.contentprovider;
 
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 public final class Say
 {
-    private String _pattern = "%s";
-    private android.content.Context _androidContext = null;
+    private static String _pattern = "%s";
+    private static android.content.Context _androidContext = null;
 
-    public Say (android.content.Context ctx)
+    public static void setContext (@NonNull android.content.Context ctx)
     {
         _androidContext = ctx;
     }
 
-    public Say (String pattern, android.content.Context ctx)
+    public static void setPattern (@NonNull String pattern)
     {
         _pattern = pattern;
-        _androidContext = ctx;
     }
 
-    public void d (String text)
+    public static void d (String text)
     {
         Log.d(LogTag.TAG, String.format(_pattern, text));
     }
 
-    public void d (int resId)
+    public static void d (int resId)
     {
-        d(_androidContext.getString(resId));
+        if (_androidContext != null)
+            d(_androidContext.getString(resId));
+        else
+            w(String.format("Unable to obtain resource by identifier: %d: need Android context", resId));
     }
 
-    public void dt (String text)
+    public static void dtoast (String text)
     {
         String msg = String.format(_pattern, text);
         Log.d(LogTag.TAG, msg);
-        Toast toast = Toast.makeText(_androidContext, msg, Toast.LENGTH_LONG);
-        toast.show();
+
+        if (_androidContext != null) {
+            Toast toast = Toast.makeText(_androidContext, msg, Toast.LENGTH_LONG);
+            toast.show();
+        } else {
+            w(String.format("Unable to toast specified text: %s: need Android context", text));
+        }
     }
 
-    public void dt (int resId)
+    public static void dtoast (int resId)
     {
-        dt(_androidContext.getString(resId));
+        if (_androidContext != null) {
+            dtoast(_androidContext.getString(resId));
+        } else {
+            w(String.format("Unable to obtain resource by identifier: %d: need Android context", resId));
+        }
     }
 
-    public void e (String text)
+    public static void e (String text)
     {
         Log.e(LogTag.TAG, String.format(_pattern, text));
     }
 
-    public void e (int resId)
-    {
-        e(_androidContext.getString(resId));
-    }
-
-    public void w (String text)
+    public static void w (String text)
     {
         Log.w(LogTag.TAG, String.format(_pattern, text));
-    }
-
-    public void w (int resId)
-    {
-        w(_androidContext.getString(resId));
     }
 }

@@ -2,6 +2,7 @@ package pfs.android.contentprovider;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 
@@ -17,13 +18,26 @@ public class MainActivity extends AppCompatActivity
 {
     private Button _openFileButton;
 
-    private final Say say = new Say(this);
-    private OpenDocumentDialog _openDocumentDialog = new OpenDocumentDialog(this);
+    public static Bridge _contentProviderBridge = null;
+
+    private OpenDocumentDialog _openDocumentDialog = new OpenDocumentDialog(this
+        , new OpenDocumentDialog.Listener () {
+                @Override
+                public void onUriChosen (Uri uri)
+                {
+                    Say.dtoast(String.format("File selected: %s", uri.toString()));
+                    ContentInfo contentInfo = _contentProviderBridge.getFileInfo(uri);
+                    Say.d("Display name: " + contentInfo.displayName);
+                }
+        }
+    );
 
     @Override
-    protected void onCreate(Bundle savedInstanceState)
+    protected void onCreate (Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        Say.setContext(this);
+        _contentProviderBridge = Bridge.create(this);
 
         writeTestFilesToStorage();
 
@@ -31,7 +45,7 @@ public class MainActivity extends AppCompatActivity
 
         _openFileButton = findViewById(R.id.open_file_button);
         _openFileButton.setOnClickListener(view -> {
-            say.dt(String.format("\"%s\" button clicked", getString(R.string.open_file_button)));
+            Say.dtoast(String.format("\"%s\" button clicked", getString(R.string.open_file_button)));
             _openDocumentDialog.launch("*/*");
         });
     }

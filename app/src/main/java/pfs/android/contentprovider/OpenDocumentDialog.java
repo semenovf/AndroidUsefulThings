@@ -13,7 +13,11 @@ public class OpenDocumentDialog
 {
     private ActivityResultLauncher<Intent> _openDocumentResult = null;
 
-    public OpenDocumentDialog (ComponentActivity activity)
+    public interface Listener {
+        public abstract void onUriChosen (Uri uri);
+    }
+
+    public OpenDocumentDialog (ComponentActivity activity, Listener listener)
     {
         // Need to call `registerForActivityResult()` before the fragment or activity is created.
         // You cannot launch the ActivityResultLauncher until the fragment or activity's Lifecycle
@@ -27,6 +31,9 @@ public class OpenDocumentDialog
                 if (result.getResultCode() == Activity.RESULT_OK) {
                     Intent intent = result.getData();
                     Uri uri = intent.getData();
+
+                    if (listener != null)
+                        listener.onUriChosen(uri);
                 }
             });
     }

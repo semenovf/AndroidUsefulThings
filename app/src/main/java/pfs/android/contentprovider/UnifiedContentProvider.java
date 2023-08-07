@@ -1,3 +1,11 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2023 Vladislav Trifochkin
+//
+// This file is part of `Android support library`.
+//
+// Changelog:
+//      2023.07.31 Initial version.
+////////////////////////////////////////////////////////////////////////////////
 package pfs.android.contentprovider;
 
 import static android.os.Build.VERSION.SDK_INT;
@@ -60,7 +68,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     private static final String DEFAULT_PROVIDER_TITLE = "Unified Content Provider";
     private static final String DEFAULT_PROVIDER_DESCRIPTION = "Unified Content Provider";
 
-    private static final int DEFAULT_PROVIDER_ICON = R.mipmap.ic_launcher;
+    private static final int DEFAULT_PROVIDER_ICON = 0;
 
     private String _providerTitle = DEFAULT_PROVIDER_TITLE;
     private String _providerDesc = DEFAULT_PROVIDER_DESCRIPTION;
@@ -83,8 +91,6 @@ public class UnifiedContentProvider extends DocumentsProvider
     // provider might return a directory containing all tags, represented as child directories.
     private File _baseDir;
 
-    private Say say;
-
     private void determineTopDirs (int arrayResId)
     {
         _baseDir = getContext().getFilesDir();
@@ -95,7 +101,7 @@ public class UnifiedContentProvider extends DocumentsProvider
 
             for (String record : topDirRecords) {
                 TopDirCredentials topDirCredentials = new TopDirCredentials();
-                topDirCredentials.iconId = R.mipmap.ic_launcher; // FIXME
+                topDirCredentials.iconId = DEFAULT_PROVIDER_ICON; // FIXME
 
                 String[] cred = record.split(";");
                 String dir = cred[0];
@@ -104,20 +110,20 @@ public class UnifiedContentProvider extends DocumentsProvider
                 topDirCredentials.folder = new File(_baseDir + File.separator + dir).getAbsoluteFile();//.getCanonicalFile();
 
                 if (!topDirCredentials.folder.exists()) {
-                    say.e(String.format("Folder not exists: %s, item ignored: %s"
+                    Say.e(String.format("Folder not exists: %s, item ignored: %s"
                             , topDirCredentials.folder, dir));
                     continue;
                 }
 
                 if (!topDirCredentials.folder.isDirectory()) {
-                    say.e(String.format("Path must be a directory: %s, item ignored: %s"
+                    Say.e(String.format("Path must be a directory: %s, item ignored: %s"
                             , topDirCredentials.folder, dir));
                     continue;
                 }
 
                 _topDirs.add(topDirCredentials);
 
-                say.d("Added top directory: " + topDirCredentials.folder.getCanonicalFile());
+                Say.d("Added top directory: " + topDirCredentials.folder.getCanonicalFile());
             }
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException("Expected 'provider_top_dirs' specified in AndroidManifest.xml for UnifiedContentProvider", e);
@@ -129,15 +135,20 @@ public class UnifiedContentProvider extends DocumentsProvider
     @Override
     public boolean onCreate ()
     {
-        say = new Say("~~~ UCP: %s", getContext());
-
         Bundle bundle;
 
         try {
             Context ctx = getContext();
             PackageManager pm = ctx.getPackageManager();
             ComponentName providerName = new ComponentName(ctx, this.getClass());
-            ProviderInfo providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
+            ProviderInfo providerInfo = null;
+
+            if (SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
+            } else {
+                providerInfo = pm.getProviderInfo(providerName, PackageManager.ComponentInfoFlags.of(PackageManager.GET_META_DATA));
+            }
+
             bundle = providerInfo.metaData;
             _providerTitle = bundle.getString("provider_title", DEFAULT_PROVIDER_TITLE);
             _providerDesc = bundle.getString("provider_description", DEFAULT_PROVIDER_DESCRIPTION);
@@ -165,7 +176,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     @Override
     public Cursor queryRoots (String[] projection)
     {
-        say.d("queryRoots");
+        Say.d("queryRoots");
 
         // Create a cursor with either the requested fields, or the default projection.  This
         // cursor is returned to the Android system picker UI and used to display all roots from
@@ -214,7 +225,7 @@ public class UnifiedContentProvider extends DocumentsProvider
         //row.add(Root.COLUMN_ICON, android.R.drawable.ic_delete);
         row.add(Root.COLUMN_ICON, _providerIcon);
 
-        say.d("queryRoots: result=" + result);
+        Say.d("queryRoots: result=" + result);
 
         return result;
     }
@@ -232,7 +243,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     public Cursor queryChildDocuments (String parentDocumentId, String[] projection
             , String sortOrder) throws FileNotFoundException
     {
-        say.d(String.format("queryChildDocuments: parentDocumentId=%s, sortOrder=%s", parentDocumentId, sortOrder));
+        Say.d(String.format("queryChildDocuments: parentDocumentId=%s, sortOrder=%s", parentDocumentId, sortOrder));
 
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
         final File parent = getFileForDocId(parentDocumentId);
@@ -305,7 +316,7 @@ public class UnifiedContentProvider extends DocumentsProvider
             File childFile = getFileForDocId(documentId);
             return isChildFile(parentFile, childFile);
         } catch (FileNotFoundException e) {
-            say.e("FileNotFound in isChildDocument: " + e.getMessage());
+            Say.e("FileNotFound in isChildDocument: " + e.getMessage());
             e.printStackTrace();
         }
         return false;
@@ -401,7 +412,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     {
         String path = file.getAbsolutePath();
 
-        say.d(String.format("getDocIdForFile: file=%s, path=%s", file, path));
+        Say.d(String.format("getDocIdForFile: file=%s, path=%s", file, path));
 
         // Start at first char of path under root
         final String rootPath = _baseDir.getPath();
@@ -419,7 +430,7 @@ public class UnifiedContentProvider extends DocumentsProvider
 
     private void includeTopDirs (MatrixCursor result)
     {
-        say.d("includeTopDirs");
+        Say.d("includeTopDirs");
 
         for (TopDirCredentials cred: _topDirs) {
             String docId = getDocIdForFile(cred.folder);
@@ -451,7 +462,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     private void includeFile (MatrixCursor result, String docId, File file)
             throws FileNotFoundException
     {
-        say.d(String.format("includeFile: docId=%s, file:%s", docId, file));
+        Say.d(String.format("includeFile: docId=%s, file:%s", docId, file));
 
         if (docId == null) {
             docId = getDocIdForFile(file);
@@ -505,8 +516,7 @@ public class UnifiedContentProvider extends DocumentsProvider
         row.add(Document.COLUMN_FLAGS, flags);
 
         // Add a custom icon
-        //row.add(Document.COLUMN_ICON, R.drawable.ic_launcher);
-        row.add(Document.COLUMN_ICON, R.mipmap.ic_launcher);
+        // row.add(Document.COLUMN_ICON, R.mipmap.ic_launcher);
     }
 
     /**
@@ -518,7 +528,7 @@ public class UnifiedContentProvider extends DocumentsProvider
      */
     private File getFileForDocId (String docId) throws FileNotFoundException
     {
-        say.d(String.format("getFileForDocId: docId=%s", docId));
+        Say.d(String.format("getFileForDocId: docId=%s", docId));
 
         File target = _baseDir;
 
@@ -539,4 +549,3 @@ public class UnifiedContentProvider extends DocumentsProvider
         }
     }
 }
-
