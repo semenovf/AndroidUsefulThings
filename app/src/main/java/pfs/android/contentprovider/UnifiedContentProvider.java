@@ -68,7 +68,15 @@ public class UnifiedContentProvider extends DocumentsProvider
     //private Drawable _providerIcon = null;
     private int _providerIcon = DEFAULT_PROVIDER_ICON;
 
-    private ArrayList<File> _topDirs = null;
+    private class TopDirCredentials
+    {
+        public File folder;
+        public String displayName;
+
+        public int iconId;
+    }
+
+    private ArrayList<TopDirCredentials> _topDirs = null;
 
     // A file object at the root of the file hierarchy.  Depending on your implementation, the root
     // does not need to be an existing file system directory.  For example, a tag-based document
@@ -80,27 +88,36 @@ public class UnifiedContentProvider extends DocumentsProvider
     private void determineTopDirs (int arrayResId)
     {
         _baseDir = getContext().getFilesDir();
-        String[] initialTopDirs = getContext().getResources().getStringArray(arrayResId);
+        String[] topDirRecords = getContext().getResources().getStringArray(arrayResId);
 
         try {
-            _topDirs = new ArrayList<File>();
+            _topDirs = new ArrayList<TopDirCredentials>();
 
-            for (String dir : initialTopDirs) {
-                File folder = new File(_baseDir + File.separator + dir).getAbsoluteFile();//.getCanonicalFile();
+            for (String record : topDirRecords) {
+                TopDirCredentials topDirCredentials = new TopDirCredentials();
+                topDirCredentials.iconId = R.mipmap.ic_launcher; // FIXME
 
-                if (!folder.exists()) {
-                    say.e(String.format("Folder not exists: %s, item ignored: %s", folder, dir));
+                String[] cred = record.split(";");
+                String dir = cred[0];
+                topDirCredentials.displayName = cred.length > 1 ? cred[1] : cred[0];
+
+                topDirCredentials.folder = new File(_baseDir + File.separator + dir).getAbsoluteFile();//.getCanonicalFile();
+
+                if (!topDirCredentials.folder.exists()) {
+                    say.e(String.format("Folder not exists: %s, item ignored: %s"
+                            , topDirCredentials.folder, dir));
                     continue;
                 }
 
-                if (!folder.isDirectory()) {
-                    say.e(String.format("Path must be a directory: %s, item ignored: %s", folder, dir));
+                if (!topDirCredentials.folder.isDirectory()) {
+                    say.e(String.format("Path must be a directory: %s, item ignored: %s"
+                            , topDirCredentials.folder, dir));
                     continue;
                 }
 
-                _topDirs.add(folder);
+                _topDirs.add(topDirCredentials);
 
-                say.d("Added top directory: " + folder.getCanonicalFile());
+                say.d("Added top directory: " + topDirCredentials.folder.getCanonicalFile());
             }
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException("Expected 'provider_top_dirs' specified in AndroidManifest.xml for UnifiedContentProvider", e);
@@ -190,7 +207,9 @@ public class UnifiedContentProvider extends DocumentsProvider
         // The child MIME types are used to filter the roots and only present to the user roots
         // that contain the desired type somewhere in their file hierarchy.
         row.add(Root.COLUMN_MIME_TYPES, getChildMimeTypes(_baseDir));
+
         //row.add(Root.COLUMN_AVAILABLE_BYTES, _baseDir.getFreeSpace());
+
         //row.add(Root.COLUMN_ICON, R.mipmap.ic_launcher);
         //row.add(Root.COLUMN_ICON, android.R.drawable.ic_delete);
         row.add(Root.COLUMN_ICON, _providerIcon);
@@ -220,8 +239,7 @@ public class UnifiedContentProvider extends DocumentsProvider
 
         //if (parentDocumentId.equals(getDocIdForFile(_baseDir))) {
         if (parentDocumentId.equals(ROOT)) {
-            for (File file: _topDirs)
-                includeFile(result, null, file);
+            includeTopDirs(result);
         } else {
             for (File file: parent.listFiles()) {
                 includeFile(result, null, file);
@@ -397,6 +415,29 @@ public class UnifiedContentProvider extends DocumentsProvider
         }
 
         return ROOT + ':' + path;
+    }
+
+    private void includeTopDirs (MatrixCursor result)
+    {
+        say.d("includeTopDirs");
+
+        for (TopDirCredentials cred: _topDirs) {
+            String docId = getDocIdForFile(cred.folder);
+            int flags = 0;
+
+            // Add FLAG_DIR_SUPPORTS_CREATE if the file is a writable directory.
+            if (cred.folder.isDirectory() && cred.folder.canWrite())
+                flags |= Document.FLAG_DIR_SUPPORTS_CREATE;
+
+            final MatrixCursor.RowBuilder row = result.newRow();
+            row.add(Document.COLUMN_DOCUMENT_ID, docId);
+            row.add(Document.COLUMN_DISPLAY_NAME, cred.displayName);
+            row.add(Document.COLUMN_SIZE, cred.folder.length());
+            row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
+            row.add(Document.COLUMN_LAST_MODIFIED, cred.folder.lastModified());
+            row.add(Document.COLUMN_FLAGS, flags);
+            row.add(Document.COLUMN_ICON, cred.iconId);
+        }
     }
 
     /**

@@ -26,8 +26,15 @@ android {
     }
 }
 
-dependencies {
+tasks.withType(JavaCompile) {
+    // Note: Recompile with -Xlint:deprecation for details.
+    // Use this instruction
+    options.deprecation = true
+    // Or this
+    // options.compilerArgs += ["-Xlint:unchecked", "-Xlint:deprecation"]
+}
 
+dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.8.0'
 }
