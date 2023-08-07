@@ -23,9 +23,14 @@ public final class Say
         _androidContext = ctx;
     }
 
-    public static void setPattern (@NonNull String pattern)
+    public static void setPattern (@androidx.annotation.NonNull String pattern)
     {
         _pattern = pattern;
+    }
+
+    public static void resetPattern ()
+    {
+        _pattern = "%s";
     }
 
     public static void d (String text)

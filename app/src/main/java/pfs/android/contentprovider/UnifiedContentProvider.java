@@ -19,7 +19,6 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.Point;
-import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
@@ -143,7 +142,7 @@ public class UnifiedContentProvider extends DocumentsProvider
             ComponentName providerName = new ComponentName(ctx, this.getClass());
             ProviderInfo providerInfo = null;
 
-            if (SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            if (SDK_INT < 33) { // < Build.VERSION_CODES.TIRAMISU (33)
                 providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
             } else {
                 providerInfo = pm.getProviderInfo(providerName, PackageManager.ComponentInfoFlags.of(PackageManager.GET_META_DATA));
@@ -152,7 +151,6 @@ public class UnifiedContentProvider extends DocumentsProvider
             bundle = providerInfo.metaData;
             _providerTitle = bundle.getString("provider_title", DEFAULT_PROVIDER_TITLE);
             _providerDesc = bundle.getString("provider_description", DEFAULT_PROVIDER_DESCRIPTION);
-            //_providerIcon = getContext().getResources().getDrawable(bundle.getInt("provider_icon"));
             _providerIcon = bundle.getInt("provider_icon", DEFAULT_PROVIDER_ICON);
         } catch (PackageManager.NameNotFoundException e) {
             throw new RuntimeException(e);

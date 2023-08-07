@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         Say.setContext(this);
+        Say.resetPattern();
         _contentProviderBridge = Bridge.create(this);
 
         writeTestFilesToStorage();
