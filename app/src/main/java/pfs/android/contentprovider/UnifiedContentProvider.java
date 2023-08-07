@@ -142,11 +142,12 @@ public class UnifiedContentProvider extends DocumentsProvider
             ComponentName providerName = new ComponentName(ctx, this.getClass());
             ProviderInfo providerInfo = null;
 
-            if (SDK_INT < 33) { // < Build.VERSION_CODES.TIRAMISU (33)
-                providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
-            } else {
-                providerInfo = pm.getProviderInfo(providerName, PackageManager.ComponentInfoFlags.of(PackageManager.GET_META_DATA));
-            }
+//            if (SDK_INT < 33) { // < Build.VERSION_CODES.TIRAMISU (33)
+//                providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
+//            } else {
+//                providerInfo = pm.getProviderInfo(providerName, PackageManager.ComponentInfoFlags.of(PackageManager.GET_META_DATA));
+//            }
+            providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
 
             bundle = providerInfo.metaData;
             _providerTitle = bundle.getString("provider_title", DEFAULT_PROVIDER_TITLE);
