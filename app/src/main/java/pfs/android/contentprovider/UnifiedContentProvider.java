@@ -62,6 +62,8 @@ public class UnifiedContentProvider extends DocumentsProvider
         , Document.COLUMN_SIZE
     };
 
+    // This value must be set for `android:authorities` property for <provider>
+    // tag at AndroidManifest.xml
     private static final String ROOT = "pfs.android.contentprovider";
 
     private static final String DEFAULT_PROVIDER_TITLE = "Unified Content Provider";

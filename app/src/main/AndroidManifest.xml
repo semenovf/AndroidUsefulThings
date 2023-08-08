@@ -24,14 +24,14 @@
 
         <provider
             android:name="pfs.android.contentprovider.UnifiedContentProvider"
-            android:authorities="pfs.android.contentprovider.UnifiedContentProvider"
+            android:authorities="pfs.android.contentprovider"
             android:grantUriPermissions="true"
             android:exported="true"
             android:permission="android.permission.MANAGE_DOCUMENTS">
 
             <meta-data android:name="provider_title" android:value="@string/provider_title" />
             <meta-data android:name="provider_description" android:value="@string/provider_description" />
-            <meta-data android:name="provider_icon" android:resource="@drawable/ic_folder_32" />
+            <meta-data android:name="provider_icon" android:resource="@mipmap/ic_launcher" />
             <meta-data android:name="provider_top_dirs" android:resource="@array/provider_top_dirs" />
 
             <intent-filter>
