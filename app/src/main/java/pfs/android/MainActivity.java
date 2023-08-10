@@ -1,10 +1,13 @@
-package pfs.android.contentprovider;
+package pfs.android;
 
-import android.content.Context;
 import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
+import android.widget.EditText;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -18,7 +21,7 @@ public class MainActivity extends AppCompatActivity
 {
     private Button _openFileButton;
 
-    public static Bridge _contentProviderBridge = null;
+    public static pfs.android.contentprovider.Bridge _contentProviderBridge = null;
 
     private OpenDocumentDialog _openDocumentDialog = new OpenDocumentDialog(this
         , new OpenDocumentDialog.Listener () {
@@ -26,7 +29,7 @@ public class MainActivity extends AppCompatActivity
                 public void onUriChosen (Uri uri)
                 {
                     Say.dtoast(String.format("File selected: %s", uri.toString()));
-                    ContentInfo contentInfo = _contentProviderBridge.getFileInfo(uri);
+                    pfs.android.contentprovider.ContentInfo contentInfo = _contentProviderBridge.getFileInfo(uri);
                     Say.d("Display name: " + contentInfo.displayName);
                 }
         }
@@ -38,7 +41,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         Say.setContext(this);
         Say.resetPattern();
-        _contentProviderBridge = Bridge.create(this);
+        _contentProviderBridge = pfs.android.contentprovider.Bridge.create(this);
 
         writeTestFilesToStorage();
 
@@ -49,6 +52,21 @@ public class MainActivity extends AppCompatActivity
             Say.dtoast(String.format("\"%s\" button clicked", getString(R.string.open_file_button)));
             _openDocumentDialog.launch("*/*");
         });
+
+        EditText editText = findViewById(R.id.edit_text);
+        // KeyboardListener keyboardListener = new KeyboardListener(this, R.id.root_view);
+        // Or
+        // KeyboardListener keyboardListener = new KeyboardListener(this);
+
+        KeyboardObserver keyboardObserver = new KeyboardObserver() {
+            @Override
+            public void onKeyboardHeight(float height, int keyboardHeight, int keyboardY, int orientation) {
+                Say.d(String.format("~~~ height=%f, keyboardHeight=%d, keyboardY=%d, orientation=%d"
+                        , height, keyboardHeight, keyboardY, orientation));
+            }
+        };
+
+        KeyboardProvider keyboardProvider = new KeyboardProvider(this, keyboardObserver);
     }
 
     /**

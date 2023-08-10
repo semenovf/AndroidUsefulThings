@@ -1,4 +1,4 @@
-package pfs.android.contentprovider;
+package pfs.android;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.FIELD;

@@ -1,4 +1,4 @@
-package pfs.android.contentprovider;
+package pfs.android;
 
 import android.app.Activity;
 import android.content.Intent;

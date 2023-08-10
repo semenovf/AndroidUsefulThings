@@ -36,6 +36,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import pfs.android.Say;
+
 public class UnifiedContentProvider extends DocumentsProvider
 {
     // Use these as the default columns to return information about a root if no specific
@@ -77,12 +79,19 @@ public class UnifiedContentProvider extends DocumentsProvider
     //private Drawable _providerIcon = null;
     private int _providerIcon = DEFAULT_PROVIDER_ICON;
 
+    private class Options
+    {
+        boolean nosubdirs = false;
+    }
+
     private class TopDirCredentials
     {
         public File folder;
         public String displayName;
 
         public int iconId;
+
+        public Options opts;
     }
 
     private ArrayList<TopDirCredentials> _topDirs = null;
@@ -107,6 +116,12 @@ public class UnifiedContentProvider extends DocumentsProvider
                 String[] cred = record.split(";");
                 String dir = cred[0];
                 topDirCredentials.displayName = cred.length > 1 ? cred[1] : cred[0];
+
+                // Options specified
+                if (cred.length > 2) {
+                    if (cred[2].contains("nosubdirs"))
+                        topDirCredentials.opts.nosubdirs = true;
+                }
 
                 topDirCredentials.folder = new File(_baseDir + File.separator + dir).getAbsoluteFile();//.getCanonicalFile();
 

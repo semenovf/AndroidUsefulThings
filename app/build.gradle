@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'pfs.android.contentprovider'
+    namespace 'pfs.android'
     compileSdk 33
 
     defaultConfig {
-        applicationId "pfs.android.contentprovider"
+        applicationId "pfs.android"
         minSdk 24
         targetSdk 33
         versionCode 1

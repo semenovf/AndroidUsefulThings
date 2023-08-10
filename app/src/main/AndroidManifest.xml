@@ -13,7 +13,8 @@
         tools:targetApi="31">
 
         <activity
-            android:name="pfs.android.contentprovider.MainActivity"
+            android:name="pfs.android.MainActivity"
+            android:windowSoftInputMode="stateUnspecified|adjustNothing"
             android:exported="true">
 
             <intent-filter>

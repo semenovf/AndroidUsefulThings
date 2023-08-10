@@ -6,7 +6,7 @@
 // Changelog:
 //      2023.07.31 Initial version.
 ////////////////////////////////////////////////////////////////////////////////
-package pfs.android.contentprovider;
+package pfs.android;
 
 import android.util.Log;
 import android.widget.Toast;

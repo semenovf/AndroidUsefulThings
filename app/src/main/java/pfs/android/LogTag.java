@@ -6,8 +6,8 @@
 // Changelog:
 //      2023.07.31 Initial version.
 ////////////////////////////////////////////////////////////////////////////////
-package pfs.android.contentprovider;
+package pfs.android;
 
 public interface LogTag {
-    public static final String TAG = "pfs.android.contentprovider";
+    public static final String TAG = "pfs.android";
 }
