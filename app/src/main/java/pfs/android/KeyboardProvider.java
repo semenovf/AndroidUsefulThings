@@ -30,7 +30,9 @@ public class KeyboardProvider extends PopupWindow
     private View _parentView;
     private Activity _activity;
     private int _heightMax;
-    private int _navBarHeight;
+    private int _statusBarHeight = 0;
+    private int _navBarHeight = 0;
+    private boolean _fullscreen = false;
 
     public KeyboardProvider (Activity activity, KeyboardObserver listener)
     {
@@ -66,7 +68,12 @@ public class KeyboardProvider extends PopupWindow
             });
         }
 
+        Rect rect = new Rect();
+        _activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
+
+        _fullscreen = rect.top == 0;
         _navBarHeight = getNavigationBarHeight();
+        _statusBarHeight = getStatusBarHeight();
 
         _popupView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
@@ -105,6 +112,16 @@ public class KeyboardProvider extends PopupWindow
         if (keyboardHeight > 0)
             keyboardHeight += _navBarHeight;
 
+        //keyboardY -= _statusBarHeight;
+        // keyboardY -= rect.top;
+
+        if (_fullscreen) {
+            // Keyboard activation can make status bar visible, so hide the status bar.
+            // View decorView = _activity.getWindow().getDecorView();
+            // decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
+            Say.d(String.format("=== FRAME: top=%d, bottom=%d", rect.top, rect.bottom));
+        }
+
         int orientation = getScreenOrientation();
         notifyKeyboardHeight(keyboardHeight, keyboardHeight, keyboardY, orientation);
     }
@@ -116,6 +133,17 @@ public class KeyboardProvider extends PopupWindow
 
         Resources resources = _activity.getResources();
         int resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android");
+
+        if (resourceId > 0)
+            return resources.getDimensionPixelSize(resourceId);
+
+        return 0;
+    }
+
+    private int getStatusBarHeight ()
+    {
+        Resources resources = _activity.getResources();
+        int resourceId = resources.getIdentifier("status_bar_height", "dimen", "android");
 
         if (resourceId > 0)
             return resources.getDimensionPixelSize(resourceId);
