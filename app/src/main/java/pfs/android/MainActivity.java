@@ -1,14 +1,14 @@
 package pfs.android;
 
+import android.annotation.SuppressLint;
 import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.ByteArrayOutputStream;
@@ -45,6 +45,11 @@ public class MainActivity extends AppCompatActivity
 
         writeTestFilesToStorage();
 
+        // Set fullscreen mode
+//        requestWindowFeature(Window.FEATURE_NO_TITLE);
+//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+//                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
         setContentView(R.layout.activity_main);
 
         _openFileButton = findViewById(R.id.open_file_button);
@@ -53,16 +58,30 @@ public class MainActivity extends AppCompatActivity
             _openDocumentDialog.launch("*/*");
         });
 
+        ViewGroup rootViewGroup = findViewById(R.id.root_view);
         EditText editText = findViewById(R.id.edit_text);
-        // KeyboardListener keyboardListener = new KeyboardListener(this, R.id.root_view);
-        // Or
-        // KeyboardListener keyboardListener = new KeyboardListener(this);
 
-        KeyboardObserver keyboardObserver = new KeyboardObserver() {
+        KeyboardProvider.KeyboardObserver keyboardObserver = new KeyboardProvider.KeyboardObserver() {
+            @SuppressLint("DefaultLocale")
             @Override
-            public void onKeyboardHeight(float height, int keyboardHeight, int keyboardY, int orientation) {
-                Say.d(String.format("~~~ height=%f, keyboardHeight=%d, keyboardY=%d, orientation=%d"
-                        , height, keyboardHeight, keyboardY, orientation));
+            public void onKeyboardGeometry(@NonNull KeyboardProvider.KeyboardGeometry geom) {
+               Say.d(String.format("GEOMETRY READY:\n"
+                   + "\tdisplay resolution=%d x %d\n"
+                   + "\tkeyboardHeight=%d\n"
+                   + "\tkeyboardY=%d\n"
+                   + "\torientation=%d\n"
+                   + "\tnav bar height=%d\n"
+                   + "\tstatus bar height=%d\n"
+                   , geom.displayResolution.x, geom.displayResolution.y
+                   , geom.keyboardHeight, geom.keyboardY, geom.orientation
+                   , geom.navBarHeight
+                   , geom.statusBarHeight));
+
+               ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) editText.getLayoutParams();
+               p.setMargins(p.leftMargin, p.topMargin, p.rightMargin
+                   //, geom.displayResolution.y - geom.keyboardY - geom.navBarHeight/* - geom.statusBarHeight*/);
+                   , geom.keyboardHeight);
+               editText.requestLayout();
             }
         };
 

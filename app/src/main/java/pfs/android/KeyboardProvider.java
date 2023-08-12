@@ -9,8 +9,10 @@ package pfs.android;
 
 import android.app.Activity;
 import android.content.res.Resources;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,21 +20,32 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.PopupWindow;
-import android.view.Display;
-import android.util.DisplayMetrics;
 
 public class KeyboardProvider extends PopupWindow
 {
     private KeyboardObserver _observer;
-    private int _keyboardLandscapeHeight;
-    private int keyboardPortraitHeight;
     private View _popupView;
     private View _parentView;
     private Activity _activity;
-    private int _heightMax;
-    private int _statusBarHeight = 0;
-    private int _navBarHeight = 0;
-    private boolean _fullscreen = false;
+    private int _staticStatusBarHeight;
+    private int _staticNavBarHeight;
+
+    public class KeyboardGeometry
+    {
+        Point displayResolution = new Point();
+        public int keyboardHeight = 0;
+        public int keyboardY = 0;
+        public int orientation = 0;
+        int navBarHeight = 0;
+        int statusBarHeight = 0;
+    }
+
+    KeyboardGeometry _geom = new KeyboardGeometry();
+
+    public interface KeyboardObserver
+    {
+        void onKeyboardGeometry (KeyboardGeometry geom);
+    }
 
     public KeyboardProvider (Activity activity, KeyboardObserver listener)
     {
@@ -47,8 +60,8 @@ public class KeyboardProvider extends PopupWindow
         Resources resources = this._activity.getResources();
         String packageName = this._activity.getPackageName();
         int id = resources.getIdentifier("popup", "layout", packageName);
-        LayoutInflater inflator = (LayoutInflater) activity.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
-        this._popupView = inflator.inflate(id, null, false);
+        LayoutInflater inflater = (LayoutInflater) activity.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
+        this._popupView = inflater.inflate(id, null, false);
         setContentView(_popupView);
         setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         setInputMethodMode(PopupWindow.INPUT_METHOD_NEEDED);
@@ -68,12 +81,11 @@ public class KeyboardProvider extends PopupWindow
             });
         }
 
-        Rect rect = new Rect();
-        _activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
+        _staticNavBarHeight = getStatusBarHeight();
+        _staticStatusBarHeight = getStatusBarHeight();
 
-        _fullscreen = rect.top == 0;
-        _navBarHeight = getNavigationBarHeight();
-        _statusBarHeight = getStatusBarHeight();
+        _geom.navBarHeight = getNavigationBarHeight();
+        _geom.statusBarHeight = getStatusBarHeight();
 
         _popupView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
@@ -85,52 +97,51 @@ public class KeyboardProvider extends PopupWindow
         });
     }
 
-    // Close fake popup
-    public void disable ()
-    {
-        dismiss();
-    }
-
-    // Return screen orientation
     private int getScreenOrientation ()
     {
         return _activity.getResources().getConfiguration().orientation;
     }
 
+    private int getActionBarHeight ()
+    {
+        TypedValue tv = new TypedValue();
+        _activity.getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true);
+        return _activity.getResources().getDimensionPixelSize(tv.resourceId);
+    }
+
     // Handler to get keyboard height
     private void handleOnGlobalLayout ()
     {
+        // FIXME For Landscape orientation
+
+        Rect decorRect = new Rect();
         Rect rect = new Rect();
+        _activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(decorRect);
         _popupView.getWindowVisibleDisplayFrame(rect);
+        _geom.displayResolution = getDisplayResolution();
 
-        if (rect.bottom > _heightMax)
-            _heightMax = rect.bottom;
+        Say.d(String.format("~~~ 1. FRAME RECT: %d - %d, STATIC NAV BAR HEIGHT=%d, action bar height=%d"
+               , rect.top, rect.bottom, _staticNavBarHeight, getActionBarHeight()));
+        Say.d(String.format("~~~ 2. FRAME RECT: %d - %d", decorRect.top, decorRect.bottom));
 
-        int keyboardY = rect.bottom;
-        int keyboardHeight = _heightMax - rect.bottom;
+        _geom.statusBarHeight = decorRect.top;
+        _geom.navBarHeight = _geom.displayResolution.y - decorRect.bottom;
+        _geom.keyboardY = rect.bottom;
+        _geom.keyboardHeight = decorRect.bottom - rect.bottom;
+        _geom.orientation = getScreenOrientation();
 
-        if (keyboardHeight > 0)
-            keyboardHeight += _navBarHeight;
-
-        //keyboardY -= _statusBarHeight;
-        // keyboardY -= rect.top;
-
-        if (_fullscreen) {
+//        if (_fullscreen) {
             // Keyboard activation can make status bar visible, so hide the status bar.
             // View decorView = _activity.getWindow().getDecorView();
             // decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
-            Say.d(String.format("=== FRAME: top=%d, bottom=%d", rect.top, rect.bottom));
-        }
+            // Say.d(String.format("=== FRAME: top=%d, bottom=%d", rect.top, rect.bottom));
+//        }
 
-        int orientation = getScreenOrientation();
-        notifyKeyboardHeight(keyboardHeight, keyboardHeight, keyboardY, orientation);
+        notifyGeometry(_geom);
     }
 
     private int getNavigationBarHeight ()
     {
-        if (!hasSoftKeys())
-            return 0;
-
         Resources resources = _activity.getResources();
         int resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android");
 
@@ -151,30 +162,37 @@ public class KeyboardProvider extends PopupWindow
         return 0;
     }
 
-    public boolean hasSoftKeys ()
+    private Point getDisplayResolution ()
     {
-        Display d = _activity.getWindowManager().getDefaultDisplay();
-
-        DisplayMetrics realDisplayMetrics = new DisplayMetrics();
-        d.getRealMetrics(realDisplayMetrics);
-
-        int realHeight = realDisplayMetrics.heightPixels;
-        int realWidth = realDisplayMetrics.widthPixels;
-
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        d.getMetrics(displayMetrics);
-
-        int displayHeight = displayMetrics.heightPixels;
-        int displayWidth = displayMetrics.widthPixels;
-
-        boolean hasSoftwareKeys =  (realWidth - displayWidth) > 0 || (realHeight - displayHeight) > 0;
-        return hasSoftwareKeys;
+        Point displayResolution = new Point();
+        _activity.getWindowManager().getDefaultDisplay().getRealSize(displayResolution);
+        return displayResolution;
     }
 
+//    public boolean hasSoftKeys ()
+//    {
+//        Display d = _activity.getWindowManager().getDefaultDisplay();
+//
+//        DisplayMetrics realDisplayMetrics = new DisplayMetrics();
+//        d.getRealMetrics(realDisplayMetrics);
+//
+//        int realHeight = realDisplayMetrics.heightPixels;
+//        int realWidth = realDisplayMetrics.widthPixels;
+//
+//        DisplayMetrics displayMetrics = new DisplayMetrics();
+//        d.getMetrics(displayMetrics);
+//
+//        int displayHeight = displayMetrics.heightPixels;
+//        int displayWidth = displayMetrics.widthPixels;
+//
+//        boolean hasSoftwareKeys =  (realWidth - displayWidth) > 0 || (realHeight - displayHeight) > 0;
+//        return hasSoftwareKeys;
+//    }
+
     // Send data observer
-    private void notifyKeyboardHeight (float height, int keyboardHeight, int keyboardY, int orientation)
+    private void notifyGeometry (KeyboardGeometry geom)
     {
         if (_observer != null)
-            _observer.onKeyboardHeight(height, keyboardHeight, keyboardY, orientation);
+            _observer.onKeyboardGeometry(geom);
     }
 }
