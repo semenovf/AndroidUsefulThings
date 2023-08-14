@@ -12,7 +12,9 @@ import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,12 +34,15 @@ public class KeyboardProvider extends PopupWindow
 
     public class KeyboardGeometry
     {
-        Point displayResolution = new Point();
+        public Point displayResolution = new Point();
+        public int topViewArea = 0;
+        public int bottomViewArea = 0;
         public int keyboardHeight = 0;
         public int keyboardY = 0;
         public int orientation = 0;
-        int navBarHeight = 0;
-        int statusBarHeight = 0;
+        public int navBarHeight = 0;
+        public int statusBarHeight = 0;
+        public float density = 1f;
     }
 
     KeyboardGeometry _geom = new KeyboardGeometry();
@@ -124,11 +129,18 @@ public class KeyboardProvider extends PopupWindow
                , rect.top, rect.bottom, _staticNavBarHeight, getActionBarHeight()));
         Say.d(String.format("~~~ 2. FRAME RECT: %d - %d", decorRect.top, decorRect.bottom));
 
+        _geom.topViewArea = rect.top;
+        _geom.bottomViewArea = rect.bottom;
         _geom.statusBarHeight = decorRect.top;
         _geom.navBarHeight = _geom.displayResolution.y - decorRect.bottom;
         _geom.keyboardY = rect.bottom;
         _geom.keyboardHeight = decorRect.bottom - rect.bottom;
         _geom.orientation = getScreenOrientation();
+
+        Display d = _activity.getWindowManager().getDefaultDisplay();
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        d.getRealMetrics(displayMetrics);
+        _geom.density = displayMetrics.density;
 
 //        if (_fullscreen) {
             // Keyboard activation can make status bar visible, so hide the status bar.

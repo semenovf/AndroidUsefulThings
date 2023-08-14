@@ -65,23 +65,28 @@ public class MainActivity extends AppCompatActivity
             @SuppressLint("DefaultLocale")
             @Override
             public void onKeyboardGeometry(@NonNull KeyboardProvider.KeyboardGeometry geom) {
-               Say.d(String.format("GEOMETRY READY:\n"
-                   + "\tdisplay resolution=%d x %d\n"
-                   + "\tkeyboardHeight=%d\n"
-                   + "\tkeyboardY=%d\n"
-                   + "\torientation=%d\n"
-                   + "\tnav bar height=%d\n"
-                   + "\tstatus bar height=%d\n"
-                   , geom.displayResolution.x, geom.displayResolution.y
-                   , geom.keyboardHeight, geom.keyboardY, geom.orientation
-                   , geom.navBarHeight
-                   , geom.statusBarHeight));
+                Say.d(String.format("GEOMETRY READY:\n"
+                    + "\tdisplay resolution=%d x %d\n"
+                    + "\ttopViewArea=%d\n"
+                    + "\tbottomViewArea=%d\n"
+                    + "\tkeyboardHeight=%d\n"
+                    + "\tkeyboardY=%d\n"
+                    + "\torientation=%d\n"
+                    + "\tnav bar height=%d\n"
+                    + "\tstatus bar height=%d\n"
+                    + "\tdensity=%f\n"
+                    , geom.displayResolution.x, geom.displayResolution.y
+                    , geom.topViewArea, geom.bottomViewArea
+                    , geom.keyboardHeight, geom.keyboardY, geom.orientation
+                    , geom.navBarHeight
+                    , geom.statusBarHeight
+                    , geom.density));
 
-               ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) editText.getLayoutParams();
-               p.setMargins(p.leftMargin, p.topMargin, p.rightMargin
-                   //, geom.displayResolution.y - geom.keyboardY - geom.navBarHeight/* - geom.statusBarHeight*/);
-                   , geom.keyboardHeight);
-               editText.requestLayout();
+                ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) editText.getLayoutParams();
+                p.setMargins(p.leftMargin, p.topMargin, p.rightMargin
+                    //, geom.displayResolution.y - geom.keyboardY - geom.navBarHeight/* - geom.statusBarHeight*/);
+                    , geom.keyboardHeight);
+                editText.requestLayout();
             }
         };
 
