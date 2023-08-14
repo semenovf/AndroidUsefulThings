@@ -35,8 +35,8 @@ public class KeyboardProvider extends PopupWindow
     public class KeyboardGeometry
     {
         public Point displayResolution = new Point();
-        public int topViewArea = 0;
-        public int bottomViewArea = 0;
+        public int viewAreaTop = 0;
+        public int viewAreaBottom = 0;
         public int keyboardHeight = 0;
         public int keyboardY = 0;
         public int orientation = 0;
@@ -129,8 +129,8 @@ public class KeyboardProvider extends PopupWindow
                , rect.top, rect.bottom, _staticNavBarHeight, getActionBarHeight()));
         Say.d(String.format("~~~ 2. FRAME RECT: %d - %d", decorRect.top, decorRect.bottom));
 
-        _geom.topViewArea = rect.top;
-        _geom.bottomViewArea = rect.bottom;
+        _geom.viewAreaTop = rect.top;
+        _geom.viewAreaBottom = rect.bottom;
         _geom.statusBarHeight = decorRect.top;
         _geom.navBarHeight = _geom.displayResolution.y - decorRect.bottom;
         _geom.keyboardY = rect.bottom;

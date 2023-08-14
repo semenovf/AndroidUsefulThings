@@ -67,8 +67,8 @@ public class MainActivity extends AppCompatActivity
             public void onKeyboardGeometry(@NonNull KeyboardProvider.KeyboardGeometry geom) {
                 Say.d(String.format("GEOMETRY READY:\n"
                     + "\tdisplay resolution=%d x %d\n"
-                    + "\ttopViewArea=%d\n"
-                    + "\tbottomViewArea=%d\n"
+                    + "\tviewAreaTop=%d\n"
+                    + "\tviewAreaBottom=%d\n"
                     + "\tkeyboardHeight=%d\n"
                     + "\tkeyboardY=%d\n"
                     + "\torientation=%d\n"
@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity
                     + "\tstatus bar height=%d\n"
                     + "\tdensity=%f\n"
                     , geom.displayResolution.x, geom.displayResolution.y
-                    , geom.topViewArea, geom.bottomViewArea
+                    , geom.viewAreaTop, geom.viewAreaBottom
                     , geom.keyboardHeight, geom.keyboardY, geom.orientation
                     , geom.navBarHeight
                     , geom.statusBarHeight
