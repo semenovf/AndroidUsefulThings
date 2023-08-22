@@ -5,6 +5,8 @@ import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 
@@ -19,7 +21,13 @@ import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity
 {
+    KeyboardProvider _keyboardProvider;
     private Button _openFileButton;
+    private Button _openFolderButton;
+    private Uri _lastUriChosen;
+
+    // Set to true if need to force full screen mode
+    private boolean _fullscreenMode = false;
 
     public static pfs.android.contentprovider.Bridge _contentProviderBridge = null;
 
@@ -31,13 +39,18 @@ public class MainActivity extends AppCompatActivity
                     Say.dtoast(String.format("File selected: %s", uri.toString()));
                     pfs.android.contentprovider.ContentInfo contentInfo = _contentProviderBridge.getFileInfo(uri);
                     Say.d("Display name: " + contentInfo.displayName);
+
+                    _lastUriChosen = uri;
+
+                    if (_openFolderButton != null) {
+                        _openFolderButton.setEnabled(true);
+                        _openFolderButton.setText(contentInfo.displayName);
+                    }
                 }
-        }
-    );
+        });
 
     @Override
-    protected void onCreate (Bundle savedInstanceState)
-    {
+    protected void onCreate (Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Say.setContext(this);
         Say.resetPattern();
@@ -46,11 +59,24 @@ public class MainActivity extends AppCompatActivity
         writeTestFilesToStorage();
 
         // Set fullscreen mode
-//        requestWindowFeature(Window.FEATURE_NO_TITLE);
-//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-//                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        if (_fullscreenMode) {
+            requestWindowFeature(Window.FEATURE_NO_TITLE);
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                   WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
 
         setContentView(R.layout.activity_main);
+
+        _openFolderButton = findViewById(R.id.open_folder_button);
+        _openFolderButton.setEnabled(false);
+        _openFolderButton.setOnClickListener(view -> {
+            if (_lastUriChosen != null && _lastUriChosen != Uri.EMPTY) {
+                UriUtils.chooseFileViewer(this, getString(R.string.open_file), _lastUriChosen);
+                //UriUtils.openDocument(this, getString(R.string.open_folder), _lastUriChosen);
+            } else {
+                Say.dtoast(String.format("\"%s\" button clicked", getString(R.string.no_file_chosen)));
+            }
+        });
 
         _openFileButton = findViewById(R.id.open_file_button);
         _openFileButton.setOnClickListener(view -> {
@@ -90,7 +116,18 @@ public class MainActivity extends AppCompatActivity
             }
         };
 
-        KeyboardProvider keyboardProvider = new KeyboardProvider(this, keyboardObserver);
+        _keyboardProvider = new KeyboardProvider(this, keyboardObserver);
+    }
+
+    @Override
+    protected void onDestroy ()
+    {
+        super.onDestroy();
+
+        // Avoid exception:
+        // Activity pfs.android.MainActivity has leaked window ...
+        if (_keyboardProvider != null)
+            _keyboardProvider.dismiss();
     }
 
     /**

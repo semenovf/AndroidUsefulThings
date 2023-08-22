@@ -24,6 +24,7 @@ import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.provider.DocumentsContract;
 import android.provider.DocumentsProvider;
 import android.provider.DocumentsContract.Document;
 import android.provider.DocumentsContract.Root;
@@ -34,6 +35,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 
 import pfs.android.Say;
@@ -139,12 +141,12 @@ public class UnifiedContentProvider extends DocumentsProvider
 
                 _topDirs.add(topDirCredentials);
 
-                Say.d("Added top directory: " + topDirCredentials.folder.getCanonicalFile());
+                //Say.d("Added top directory: " + topDirCredentials.folder.getCanonicalFile());
             }
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException("Expected 'provider_top_dirs' specified in AndroidManifest.xml for UnifiedContentProvider", e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
         }
     }
 
@@ -192,7 +194,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     @Override
     public Cursor queryRoots (String[] projection)
     {
-        Say.d("queryRoots");
+        //Say.d("queryRoots");
 
         // Create a cursor with either the requested fields, or the default projection.  This
         // cursor is returned to the Android system picker UI and used to display all roots from
@@ -241,7 +243,7 @@ public class UnifiedContentProvider extends DocumentsProvider
         //row.add(Root.COLUMN_ICON, android.R.drawable.ic_delete);
         row.add(Root.COLUMN_ICON, _providerIcon);
 
-        Say.d("queryRoots: result=" + result);
+        //Say.d("queryRoots: result=" + result);
 
         return result;
     }
@@ -259,7 +261,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     public Cursor queryChildDocuments (String parentDocumentId, String[] projection
             , String sortOrder) throws FileNotFoundException
     {
-        Say.d(String.format("queryChildDocuments: parentDocumentId=%s, sortOrder=%s", parentDocumentId, sortOrder));
+        //Say.d(String.format("queryChildDocuments: parentDocumentId=%s, sortOrder=%s", parentDocumentId, sortOrder));
 
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
         final File parent = getFileForDocId(parentDocumentId);
@@ -338,6 +340,38 @@ public class UnifiedContentProvider extends DocumentsProvider
         return false;
     }
 
+    // Required API 26
+    // TODO Uncomment when minimal SDK version will be 26
+//    @Override
+//    public DocumentsContract.Path findDocumentPath (String parentDocumentId, String childDocumentId)
+//        throws FileNotFoundException
+//    {
+//        Say.d(String.format("FIND DOCUMENT: parentDocumentId=%s, childDocumentId=%s"
+//            , parentDocumentId, childDocumentId));
+//
+//        if (parentDocumentId == null)
+//            parentDocumentId = ROOT;
+//
+//        final File parent = getFileForDocId(parentDocumentId);
+//        File doc = getFileForDocId(childDocumentId);
+//        final String rootId = parentDocumentId;
+//
+//        if (!doc.exists())
+//            throw new FileNotFoundException(doc + " is not found.");
+//
+//        if (!isChildFile(parent, doc))
+//            throw new FileNotFoundException(doc + " is not found under " + parent);
+//
+//        LinkedList<String> path = new LinkedList<>();
+//
+//        while (doc != null && isChildFile(parent, doc)) {
+//            path.addFirst(getDocIdForFile(doc));
+//            doc = doc.getParentFile();
+//        }
+//
+//        return new DocumentsContract.Path(rootId, path);
+//    }
+
     /**
      * @param projection the requested root column projection
      * @return either the requested root column projection, or the default projection if the
@@ -399,9 +433,10 @@ public class UnifiedContentProvider extends DocumentsProvider
     private String getChildMimeTypes (File parent)
     {
         Set<String> mimeTypes = new HashSet<String>();
-        mimeTypes.add("image/*");
-        mimeTypes.add("text/*");
-        mimeTypes.add("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        mimeTypes.add("*/*");
+        //mimeTypes.add("image/*");
+        //mimeTypes.add("text/*");
+        //mimeTypes.add("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 
         // Flatten the list into a string and insert newlines between the MIME type strings.
         StringBuilder mimeTypesString = new StringBuilder();
@@ -428,7 +463,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     {
         String path = file.getAbsolutePath();
 
-        Say.d(String.format("getDocIdForFile: file=%s, path=%s", file, path));
+        //Say.d(String.format("getDocIdForFile: file=%s, path=%s", file, path));
 
         // Start at first char of path under root
         final String rootPath = _baseDir.getPath();
@@ -446,7 +481,7 @@ public class UnifiedContentProvider extends DocumentsProvider
 
     private void includeTopDirs (MatrixCursor result)
     {
-        Say.d("includeTopDirs");
+        //Say.d("includeTopDirs");
 
         for (TopDirCredentials cred: _topDirs) {
             String docId = getDocIdForFile(cred.folder);
@@ -478,7 +513,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     private void includeFile (MatrixCursor result, String docId, File file)
             throws FileNotFoundException
     {
-        Say.d(String.format("includeFile: docId=%s, file:%s", docId, file));
+        //Say.d(String.format("includeFile: docId=%s, file:%s", docId, file));
 
         if (docId == null) {
             docId = getDocIdForFile(file);
@@ -544,7 +579,7 @@ public class UnifiedContentProvider extends DocumentsProvider
      */
     private File getFileForDocId (String docId) throws FileNotFoundException
     {
-        Say.d(String.format("getFileForDocId: docId=%s", docId));
+        //Say.d(String.format("getFileForDocId: docId=%s", docId));
 
         File target = _baseDir;
 

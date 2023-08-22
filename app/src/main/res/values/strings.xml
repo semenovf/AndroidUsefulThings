@@ -4,4 +4,7 @@
     <string name="provider_description">Unified content provider</string>
 
     <string name="open_file_button">Open File</string>
+    <string name="no_file_chosen">No file chosen</string>
+    <string name="open_file">Open file</string>
+    <string name="open_folder">Open folder</string>
 </resources>
