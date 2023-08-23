@@ -161,6 +161,11 @@ public class MainActivity extends AppCompatActivity
 
             for (int resId : docxResIds)
                 writeFileToInternalStorage(folder, resId, ".docx");
+
+            int[] pdfResIds = getResourceIdArray(R.array.pdf_res_ids);
+
+            for (int resId : pdfResIds)
+                writeFileToInternalStorage(folder, resId, ".pdf");
         }
     }
 

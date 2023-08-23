@@ -15,4 +15,9 @@
     <array name="docx_res_ids">
         <item>@raw/example</item>
     </array>
+
+    <array name="pdf_res_ids">
+        <item>@raw/sample</item>
+    </array>
+
 </resources>

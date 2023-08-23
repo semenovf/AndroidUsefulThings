@@ -124,8 +124,9 @@ public class UriUtils
 
         // Work right in this order.
         // Or use intent.setDataAndType(uri, mimeType);
-        intent.setData(uri);
-        intent.setType(mimeType);
+        //intent.setType(mimeType);
+        //intent.setData(uri);
+        intent.setDataAndType(uri, mimeType);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
@@ -133,7 +134,7 @@ public class UriUtils
             Say.w(String.format("No any activities found for view '%s' file type"
                 + ", will try default ('*/*') instead", mimeType));
 
-            intent.setType("*/*");
+            intent.setDataAndType(uri, "*/*");
 
             if (!chooseFileViewer(context, title, intent))
                 Say.w("No any activities found for view document: " + uri);
