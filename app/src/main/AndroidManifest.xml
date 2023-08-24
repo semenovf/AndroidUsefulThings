@@ -33,6 +33,7 @@
             <meta-data android:name="provider_title" android:value="@string/provider_title" />
             <meta-data android:name="provider_description" android:value="@string/provider_description" />
             <meta-data android:name="provider_icon" android:resource="@mipmap/ic_launcher" />
+            <meta-data android:name="provider_base_dir" android:value="FILES_DIR" />
             <meta-data android:name="provider_top_dirs" android:resource="@array/provider_top_dirs" />
 
             <intent-filter>

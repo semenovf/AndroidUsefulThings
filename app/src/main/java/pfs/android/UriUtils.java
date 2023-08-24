@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.net.Uri;
 import android.webkit.MimeTypeMap;
 
 import java.io.File;
@@ -76,6 +77,7 @@ public class UriUtils
     public static String getType (Context context, android.net.Uri uri)
     {
         String mimeType = null;
+
         if (ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())) {
             ContentResolver cr = context.getContentResolver();
             mimeType = cr.getType(uri);

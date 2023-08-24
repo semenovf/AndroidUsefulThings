@@ -13,6 +13,9 @@ import android.widget.Toast;
 
 public final class Say
 {
+    public static final int MAX_TRACE_LEVEL = 3;
+
+    private static int _traceLevel = 0;
     private static String _pattern = "%s";
     private static android.content.Context _androidContext = null;
 
@@ -26,9 +29,26 @@ public final class Say
         _pattern = pattern;
     }
 
+    public static void setTraceLevel (int level)
+    {
+        if (level < 0)
+            level = 0;
+
+        if (level > MAX_TRACE_LEVEL)
+            level = MAX_TRACE_LEVEL;
+
+        _traceLevel = level;
+    }
+
     public static void resetPattern ()
     {
         _pattern = "%s";
+    }
+
+    public static void t (int level, String text)
+    {
+        if (level > 0 && level <= _traceLevel)
+            Log.d(LogTag.TAG, String.format("--Trace (%d)-- " + _pattern, level, text));
     }
 
     public static void d (String text)

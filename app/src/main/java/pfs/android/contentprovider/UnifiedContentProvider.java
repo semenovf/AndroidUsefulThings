@@ -11,7 +11,9 @@ package pfs.android.contentprovider;
 import static android.os.Build.VERSION.SDK_INT;
 
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.content.res.AssetFileDescriptor;
@@ -19,6 +21,7 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.Point;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
@@ -38,6 +41,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
+import pfs.android.NonNull;
 import pfs.android.Say;
 
 public class UnifiedContentProvider extends DocumentsProvider
@@ -68,17 +72,32 @@ public class UnifiedContentProvider extends DocumentsProvider
 
     // This value must be set for `android:authorities` property for <provider>
     // tag at AndroidManifest.xml
-    private static final String ROOT = "pfs.android.contentprovider";
+    //
+    // <provider android:authorities="AUTHORITIES" ...>
+    //                        |
+    //            ---------------------------
+    //           |                          |
+    //           v                          v
+    // content://pfs.android.contentprovider/document/files%3AFolder2%2Fandroid_computer_android_studio.jpeg
+    //                                               ^    ^
+    //                                               |    |
+    //                                               -----
+    //                            ____________________|
+    //                           |
+    private static final String ROOT = "files";
 
     private static final String DEFAULT_PROVIDER_TITLE = "Unified Content Provider";
     private static final String DEFAULT_PROVIDER_DESCRIPTION = "Unified Content Provider";
+
+    private static final String BASE_DIR_FILES = "FILES_DIR";
+    private static final String BASE_DIR_DATA  = "DATA_DIR";
+    private static final String DEFAULT_PROVIDER_BASE_DIR = BASE_DIR_FILES;
 
     private static final int DEFAULT_PROVIDER_ICON = 0;
 
     private String _providerTitle = DEFAULT_PROVIDER_TITLE;
     private String _providerDesc = DEFAULT_PROVIDER_DESCRIPTION;
 
-    //private Drawable _providerIcon = null;
     private int _providerIcon = DEFAULT_PROVIDER_ICON;
 
     private class Options
@@ -103,9 +122,32 @@ public class UnifiedContentProvider extends DocumentsProvider
     // provider might return a directory containing all tags, represented as child directories.
     private File _baseDir;
 
+    private void logTrace (int level, String text)
+    {
+        Say.t(level, "UnifiedContentProvider: " + text);
+    }
+
+    private File baseDirByCode (String baseDirCode)
+    {
+        switch (baseDirCode) {
+            case BASE_DIR_FILES:
+                return getContext().getFilesDir();
+            case BASE_DIR_DATA:
+                return getContext().getDataDir();
+            default:
+                break;
+        }
+
+        File filesDir = getContext().getFilesDir();
+
+        Say.w(String.format("Bad base directory code: %s, use default: %s (%s)"
+            , baseDirCode, BASE_DIR_FILES, filesDir));
+
+        return filesDir;
+    }
+
     private void determineTopDirs (int arrayResId)
     {
-        _baseDir = getContext().getFilesDir();
         String[] topDirRecords = getContext().getResources().getStringArray(arrayResId);
 
         try {
@@ -125,7 +167,9 @@ public class UnifiedContentProvider extends DocumentsProvider
                         topDirCredentials.opts.nosubdirs = true;
                 }
 
-                topDirCredentials.folder = new File(_baseDir + File.separator + dir).getAbsoluteFile();//.getCanonicalFile();
+                // NOTE. Do not use getCanonicalFile() here. Need to save base directory prefix when
+                // top directory can be outside of base directory (started with `..`).
+                topDirCredentials.folder = new File(_baseDir + File.separator + dir).getAbsoluteFile();
 
                 if (!topDirCredentials.folder.exists()) {
                     Say.e(String.format("Folder not exists: %s, item ignored: %s"
@@ -141,12 +185,12 @@ public class UnifiedContentProvider extends DocumentsProvider
 
                 _topDirs.add(topDirCredentials);
 
-                //Say.d("Added top directory: " + topDirCredentials.folder.getCanonicalFile());
+                logTrace(1, "Added top directory: " + topDirCredentials.folder.getCanonicalFile());
             }
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException("Expected 'provider_top_dirs' specified in AndroidManifest.xml for UnifiedContentProvider", e);
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -161,6 +205,8 @@ public class UnifiedContentProvider extends DocumentsProvider
             ComponentName providerName = new ComponentName(ctx, this.getClass());
             ProviderInfo providerInfo = null;
 
+            // TODO Uncomment when widely used compile SDK will be greater or equals to 33
+            //  (compileSdk 33)
 //            if (SDK_INT < 33) { // < Build.VERSION_CODES.TIRAMISU (33)
 //                providerInfo = pm.getProviderInfo(providerName, PackageManager.GET_META_DATA);
 //            } else {
@@ -172,6 +218,10 @@ public class UnifiedContentProvider extends DocumentsProvider
             _providerTitle = bundle.getString("provider_title", DEFAULT_PROVIDER_TITLE);
             _providerDesc = bundle.getString("provider_description", DEFAULT_PROVIDER_DESCRIPTION);
             _providerIcon = bundle.getInt("provider_icon", DEFAULT_PROVIDER_ICON);
+
+            String baseDirCode = bundle.getString("provider_base_dir", DEFAULT_PROVIDER_BASE_DIR);
+            _baseDir = baseDirByCode(baseDirCode);
+            logTrace(1, "Base directory: " + _baseDir);
         } catch (PackageManager.NameNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -194,8 +244,6 @@ public class UnifiedContentProvider extends DocumentsProvider
     @Override
     public Cursor queryRoots (String[] projection)
     {
-        //Say.d("queryRoots");
-
         // Create a cursor with either the requested fields, or the default projection.  This
         // cursor is returned to the Android system picker UI and used to display all roots from
         // this provider.
@@ -243,7 +291,7 @@ public class UnifiedContentProvider extends DocumentsProvider
         //row.add(Root.COLUMN_ICON, android.R.drawable.ic_delete);
         row.add(Root.COLUMN_ICON, _providerIcon);
 
-        //Say.d("queryRoots: result=" + result);
+        logTrace(2, "queryRoots: result=" + result);
 
         return result;
     }
@@ -251,6 +299,8 @@ public class UnifiedContentProvider extends DocumentsProvider
     @Override
     public Cursor queryDocument (String documentId, String[] projection) throws FileNotFoundException
     {
+        logTrace(3, String.format("queryDocument: documentId=%s", documentId));
+
         // Create a cursor with the requested projection, or the default projection.
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
         includeFile(result, documentId, null);
@@ -261,7 +311,8 @@ public class UnifiedContentProvider extends DocumentsProvider
     public Cursor queryChildDocuments (String parentDocumentId, String[] projection
             , String sortOrder) throws FileNotFoundException
     {
-        //Say.d(String.format("queryChildDocuments: parentDocumentId=%s, sortOrder=%s", parentDocumentId, sortOrder));
+        logTrace(3, String.format("queryChildDocuments: parentDocumentId=%s, sortOrder=%s"
+            , parentDocumentId, sortOrder));
 
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
         final File parent = getFileForDocId(parentDocumentId);
@@ -463,7 +514,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     {
         String path = file.getAbsolutePath();
 
-        //Say.d(String.format("getDocIdForFile: file=%s, path=%s", file, path));
+        logTrace(3, String.format("getDocIdForFile: file=%s, path=%s", file, path));
 
         // Start at first char of path under root
         final String rootPath = _baseDir.getPath();
@@ -481,8 +532,6 @@ public class UnifiedContentProvider extends DocumentsProvider
 
     private void includeTopDirs (MatrixCursor result)
     {
-        //Say.d("includeTopDirs");
-
         for (TopDirCredentials cred: _topDirs) {
             String docId = getDocIdForFile(cred.folder);
             int flags = 0;
@@ -513,7 +562,7 @@ public class UnifiedContentProvider extends DocumentsProvider
     private void includeFile (MatrixCursor result, String docId, File file)
             throws FileNotFoundException
     {
-        //Say.d(String.format("includeFile: docId=%s, file:%s", docId, file));
+        logTrace(3, String.format("includeFile: docId=%s, file:%s", docId, file));
 
         if (docId == null) {
             docId = getDocIdForFile(file);
@@ -579,7 +628,7 @@ public class UnifiedContentProvider extends DocumentsProvider
      */
     private File getFileForDocId (String docId) throws FileNotFoundException
     {
-        //Say.d(String.format("getFileForDocId: docId=%s", docId));
+        logTrace(3, String.format("getFileForDocId: docId=%s", docId));
 
         File target = _baseDir;
 
@@ -598,5 +647,145 @@ public class UnifiedContentProvider extends DocumentsProvider
             }
             return target;
         }
+    }
+
+    public static class Caller
+    {
+        public static final String METHOD_URI_FROM_FILE = "uriFromFile";
+        public static final String ARG_1 = "arg1";
+        public static final String ARG_2 = "arg2";
+        public static final String ARG_3 = "arg3";
+        public static final String RESULT_ERROR = "error";
+        public static final String RESULT_ERROR_MESSAGE = "error_message";
+        public static final String RESULT_URI = "uri";
+
+        // Error codes for call results
+        public static final int IOEXCEPTION_ERROR = 1;
+        public static final int FILE_NOT_MATCH_ERROR = 2;
+        public static final int NULL_ARG_ERROR = 3;
+
+        private ContentResolver _contentResolver;
+
+        public Caller (ContentResolver contentResolver)
+        {
+            _contentResolver = contentResolver;
+        }
+
+        public Bundle call (String authority, String method, String arg, Bundle args)
+        {
+            Uri uri = new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT).authority(authority).build();
+            return _contentResolver.call(uri, method, arg, args);
+        }
+
+        public Uri getUriFromFilePath (String authority, String filePath)
+        {
+            Bundle args = new Bundle();
+            args.putString(ARG_1, authority);
+            args.putString(ARG_2, filePath);
+            Bundle result = call(authority, METHOD_URI_FROM_FILE, null, args);
+
+            if (result != null) {
+                Uri uri = Uri.parse(result.getString(RESULT_URI, ""));
+                return uri;
+            }
+
+            return null;
+        }
+
+        public Uri getUriFromFile (String authority, File file)
+        {
+            return getUriFromFilePath(authority, file.toString());
+        }
+    }
+
+    private class Callee
+    {
+        // Examples of URIs:
+        // content://pfs.android.contentprovider/document/files%3AFolder2%2Fandroid_computer_android_studio.jpeg
+        // content://pfs.android.contentprovider/document/files%3A..%2FOutsideFolder%2Fsample.pdf
+        private Uri buildContentUri (String authority, File file)
+        {
+            String docId = getDocIdForFile(file);
+            return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
+                .authority(authority).encodedPath("/document/" + Uri.encode(docId)).build();
+            //                                        ^
+            //    Not need encoding __________________|
+        }
+
+        private Bundle errorResult (int code, String message)
+        {
+            Bundle bundle = new Bundle();
+            bundle.putInt(Caller.RESULT_ERROR, code);
+            bundle.putString(Caller.RESULT_ERROR_MESSAGE, message);
+            return bundle;
+        }
+
+        private Bundle errorResult (int code)
+        {
+            return errorResult(code, "");
+        }
+
+        private Bundle argumentExpectedError (String key, String argDescription)
+        {
+            return errorResult(Caller.NULL_ARG_ERROR, String.format("Argument expected at '%s': %s"
+                , key, argDescription));
+        }
+
+        public Bundle handle (String method, String arg, Bundle args)
+        {
+            switch (method) {
+                case Caller.METHOD_URI_FROM_FILE:
+                    String authority = args.getString(Caller.ARG_1, null);
+                    String filePath  = args.getString(Caller.ARG_2, null);
+
+                    if (authority == null)
+                        return argumentExpectedError(Caller.ARG_1, "Authority");
+
+                    if (filePath == null)
+                        return argumentExpectedError(Caller.ARG_2, "File path");
+
+                    Say.d("FILE: " + filePath);
+
+                    try {
+                        File file = new File(filePath).getCanonicalFile();
+
+                        for (TopDirCredentials cred: _topDirs) {
+                            File parent = cred.folder.getCanonicalFile();
+                            File child = file;
+
+                            while (child != null) {
+                                if (child.equals(parent)) {
+                                    Say.t(2, "Top directory matches: " + cred.folder);
+
+                                    String path = file.getPath();
+                                    String parentPath = parent.getPath();
+                                    String relativePath = path.substring(parentPath.length());
+                                    file = new File(cred.folder, relativePath);
+
+                                    Bundle result = new Bundle();
+                                    result.putString(Caller.RESULT_URI, buildContentUri(authority, file).toString());
+                                    return result;
+                                }
+                                child = child.getParentFile();
+                            }
+                        }
+
+                        return errorResult(Caller.FILE_NOT_MATCH_ERROR);
+                    } catch (IOException e) {
+                        return errorResult(Caller.IOEXCEPTION_ERROR, e.getMessage());
+                    }
+                default:
+                    break;
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public Bundle call (String method, String arg, Bundle extras)
+    {
+        Callee callee = new Callee();
+        Bundle result = callee.handle(method, arg, extras);
+        return result != null ? result : super.call(method, arg, extras);
     }
 }

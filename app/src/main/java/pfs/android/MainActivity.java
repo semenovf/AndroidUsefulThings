@@ -1,6 +1,10 @@
 package pfs.android;
 
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.pm.PackageManager;
+import android.content.pm.ProviderInfo;
 import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.Bundle;
@@ -18,6 +22,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import pfs.android.contentprovider.UnifiedContentProvider;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -50,10 +56,13 @@ public class MainActivity extends AppCompatActivity
         });
 
     @Override
-    protected void onCreate (Bundle savedInstanceState) {
+    protected void onCreate (Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         Say.setContext(this);
         Say.resetPattern();
+        Say.setTraceLevel(3);
+
         _contentProviderBridge = pfs.android.contentprovider.Bridge.create(this);
 
         writeTestFilesToStorage();
@@ -71,8 +80,38 @@ public class MainActivity extends AppCompatActivity
         _openFolderButton.setEnabled(false);
         _openFolderButton.setOnClickListener(view -> {
             if (_lastUriChosen != null && _lastUriChosen != Uri.EMPTY) {
-                UriUtils.chooseFileViewer(this, getString(R.string.open_file), _lastUriChosen);
-                //UriUtils.openDocument(this, getString(R.string.open_folder), _lastUriChosen);
+                switch (_lastUriChosen.getScheme()) {
+                    case ContentResolver.SCHEME_CONTENT:
+                        UriUtils.chooseFileViewer(this, getString(R.string.open_file), _lastUriChosen);
+                        break;
+                    case ContentResolver.SCHEME_FILE:
+                        File file;
+                        String providerAuthority;
+                        try {
+                            file = new File(_lastUriChosen.getPath());
+                            PackageManager pm = this.getPackageManager();
+                            ProviderInfo providerInfo = pm.getProviderInfo(new ComponentName(this, UnifiedContentProvider.class), 0);
+                            providerAuthority = providerInfo.authority;
+                        } catch (PackageManager.NameNotFoundException e) {
+                            throw new RuntimeException(e);
+//                        } catch (IOException e) {
+//                            throw new RuntimeException(e);
+                        }
+
+                        UnifiedContentProvider.Caller caller = new UnifiedContentProvider.Caller(this.getContentResolver());
+                        Uri uri = caller.getUriFromFile(providerAuthority, file);
+
+                        if (uri != null && !uri.equals(Uri.EMPTY)) {
+                            UriUtils.chooseFileViewer(this, getString(R.string.open_file), uri);
+                        } else {
+                            Say.e("Unable to handle file: " + _lastUriChosen);
+                        }
+
+                        break;
+                    default:
+                        Say.e("Unsupported URI scheme: " + _lastUriChosen.getScheme());
+                        break;
+                }
             } else {
                 Say.dtoast(String.format("\"%s\" button clicked", getString(R.string.no_file_chosen)));
             }
