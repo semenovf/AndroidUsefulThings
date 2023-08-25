@@ -14,7 +14,6 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.ByteArrayOutputStream;
@@ -45,6 +44,9 @@ public class MainActivity extends AppCompatActivity
                     Say.dtoast(String.format("File selected: %s", uri.toString()));
                     pfs.android.contentprovider.ContentInfo contentInfo = _contentProviderBridge.getFileInfo(uri);
                     Say.d("Display name: " + contentInfo.displayName);
+
+                    MessageBox.showInfo(getFragmentManager(), "MESSAGE_BOX"
+                        , "File chosen", uri.toString());
 
                     _lastUriChosen = uri;
 
