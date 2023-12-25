@@ -1,5 +1,6 @@
 package pfs.android;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -36,6 +37,9 @@ public class MainActivity extends AppCompatActivity
 
     public static pfs.android.contentprovider.Bridge _contentProviderBridge = null;
 
+    private static final int GRANT_RECORD_AUDIO = 1001;
+    private PermissionRequester _audioRecordRequester = null;
+
     private OpenDocumentDialog _openDocumentDialog = new OpenDocumentDialog(this
         , new OpenDocumentDialog.Listener () {
                 @Override
@@ -61,6 +65,12 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate (Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        _audioRecordRequester = new PermissionRequester(this, Manifest.permission.RECORD_AUDIO, GRANT_RECORD_AUDIO);
+
+        if (_audioRecordRequester.request())
+            Say.d("RECORD_AUDIO already granted");
+
         Say.setContext(this);
         Say.resetPattern();
         Say.setTraceLevel(3);
@@ -248,5 +258,21 @@ public class MainActivity extends AppCompatActivity
         }
         ar.recycle();
         return resIds;
+    }
+
+    @Override
+    public void onRequestPermissionsResult (int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case GRANT_RECORD_AUDIO: {
+                if (_audioRecordRequester.resultCallback(requestCode, permissions, grantResults)) {
+                    // Processed by this callback
+                    if (_audioRecordRequester.isGranted()) {
+                        Say.d("RECORD_AUDIO is granted");
+                    } else {
+                        Say.d("RECORD_AUDIO denied");
+                    }
+                }
+            }
+        }
     }
 }
