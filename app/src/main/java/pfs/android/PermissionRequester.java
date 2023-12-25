@@ -18,7 +18,13 @@ public class PermissionRequester
     private Activity _activity = null;
     private String _permission = null;
     private int _requestCode = 0;
-    private boolean _granted = false;
+
+    private static final int STATUS_INITIAL = -2;
+    private static final int STATUS_DENIED = -1;
+    private static final int STATUS_REQUESTED = 0;
+    private static final int STATUS_GRANTED = 1;
+
+    private int _status = STATUS_INITIAL;
 
     /**
      *
@@ -35,20 +41,20 @@ public class PermissionRequester
 
     public boolean isGranted ()
     {
-        return _granted;
+        return _status == STATUS_GRANTED;
     }
+
     /**
      * Checks if permission is granted or requests the permission otherwise.
      *
-     * @return @c true if requested permission already granted or @c false if need to request the
-     *         permission
+     * @return Status code of the request operation (see
      */
-    public boolean request ()
+    public void request ()
     {
         boolean alreadyGranted = _activity.checkSelfPermission(_permission) == PackageManager.PERMISSION_GRANTED;
 
         if (!alreadyGranted) {
-            //When permission is not granted by user, show them message why this permission is needed.
+            // When permission is not granted by user, show them message why this permission is needed.
             if (_activity.shouldShowRequestPermissionRationale(_permission)) {
                 Say.d(String.format("Please grant permission: %s", _permission));
 
@@ -59,13 +65,11 @@ public class PermissionRequester
                 _activity.requestPermissions(new String[]{_permission}, _requestCode);
             }
 
-            return false;
+            _status = STATUS_REQUESTED;
+        } else {
+            _status = STATUS_GRANTED;
+            Say.d(String.format("Permission already granted: %s", _permission));
         }
-
-        _granted = true;
-        Say.d(String.format("Permission already granted: %s", _permission));
-
-        return true;
     }
 
     /**
@@ -78,10 +82,10 @@ public class PermissionRequester
     public boolean resultCallback (int requestCode, String permissions[], int[] grantResults) {
         if (requestCode == _requestCode) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                _granted = true;
+                _status = STATUS_GRANTED;
                 Say.d(String.format("Permission granted: %s", _permission));
             } else {
-                _granted = false;
+                _status = STATUS_DENIED;
                 Say.e(String.format("Permission denied: %s", _permission));
             }
 

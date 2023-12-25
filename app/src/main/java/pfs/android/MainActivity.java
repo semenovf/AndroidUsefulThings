@@ -67,8 +67,9 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
 
         _audioRecordRequester = new PermissionRequester(this, Manifest.permission.RECORD_AUDIO, GRANT_RECORD_AUDIO);
+        _audioRecordRequester.request();
 
-        if (_audioRecordRequester.request())
+        if (_audioRecordRequester.isGranted())
             Say.d("RECORD_AUDIO already granted");
 
         Say.setContext(this);
