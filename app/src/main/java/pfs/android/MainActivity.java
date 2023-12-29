@@ -1,6 +1,5 @@
 package pfs.android;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -37,8 +36,8 @@ public class MainActivity extends AppCompatActivity
 
     public static pfs.android.contentprovider.Bridge _contentProviderBridge = null;
 
-    private static final int GRANT_RECORD_AUDIO = 1001;
-    private PermissionRequester _audioRecordRequester = null;
+    private static final int GRANT_REQUIRED_PERMISSIONS = 1001;
+    private PermissionsRequester _permissionsRequester;
 
     private OpenDocumentDialog _openDocumentDialog = new OpenDocumentDialog(this
         , new OpenDocumentDialog.Listener () {
@@ -66,11 +65,23 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
 
-        _audioRecordRequester = new PermissionRequester(this, Manifest.permission.RECORD_AUDIO, GRANT_RECORD_AUDIO);
-        _audioRecordRequester.request();
+        String[] permissions = new String[] {
+              android.Manifest.permission.ACCESS_NETWORK_STATE
+            , android.Manifest.permission.RECORD_AUDIO
+            , android.Manifest.permission.ACCESS_FINE_LOCATION
+            , android.Manifest.permission.ACCESS_COARSE_LOCATION
+            , android.Manifest.permission.INTERNET
+            , android.Manifest.permission.RECORD_AUDIO
+        };
 
-        if (_audioRecordRequester.isGranted())
-            Say.d("RECORD_AUDIO already granted");
+        _permissionsRequester = new PermissionsRequester(this, GRANT_REQUIRED_PERMISSIONS, permissions);
+        _permissionsRequester.onPermissionResult = new PermissionsRequester.OnPermissionResult() {
+            @Override
+            public void on (String name, boolean isGranted) {
+                Say.d(String.format("Permission %s: %s", name, isGranted ? "GRANTED" : "DENIED"));
+            }
+        };
+        _permissionsRequester.request();
 
         Say.setContext(this);
         Say.resetPattern();
@@ -261,19 +272,32 @@ public class MainActivity extends AppCompatActivity
         return resIds;
     }
 
+//    @Override
+//    public void onRequestPermissionsResult (int requestCode, String permissions[], int[] grantResults) {
+//        switch (requestCode) {
+//            case GRANT_RECORD_AUDIO: {
+//                if (_audioRecordRequester.resultCallback(requestCode, permissions, grantResults)) {
+//                    // Processed by this callback
+//                    if (_audioRecordRequester.isGranted()) {
+//                        Say.d("RECORD_AUDIO is granted");
+//                    } else {
+//                        Say.d("RECORD_AUDIO denied");
+//                    }
+//                }
+//            }
+//        }
+//    }
     @Override
     public void onRequestPermissionsResult (int requestCode, String permissions[], int[] grantResults) {
+        super.onRequestPermissionsResult (requestCode, permissions, grantResults);
+
         switch (requestCode) {
-            case GRANT_RECORD_AUDIO: {
-                if (_audioRecordRequester.resultCallback(requestCode, permissions, grantResults)) {
-                    // Processed by this callback
-                    if (_audioRecordRequester.isGranted()) {
-                        Say.d("RECORD_AUDIO is granted");
-                    } else {
-                        Say.d("RECORD_AUDIO denied");
-                    }
-                }
-            }
+            case GRANT_REQUIRED_PERMISSIONS:
+                _permissionsRequester.resultCallback(permissions, grantResults);
+                break;
+            default:
+                Say.w(String.format("Unhandled permission request code: %d, ignored", requestCode));
+                break;
         }
     }
 }
