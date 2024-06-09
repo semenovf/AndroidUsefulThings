@@ -7,7 +7,4 @@
     <string name="no_file_chosen">No file chosen</string>
     <string name="open_file">Open file</string>
     <string name="open_folder">Open folder</string>
-    <string name="stopDaemon">Stop daemon</string>
-    <string name="startDaemon">Start daemon</string>
-    <string name="startDaemonFailure">Start daemon failure</string>
 </resources>

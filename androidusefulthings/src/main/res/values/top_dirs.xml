@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="provider_top_dirs">
+        <item>Folder1;Folder Name 1</item>
+        <item>Folder2</item>
+        <item>Folder3;Folder Name 3</item>
+        <item>../OutsideFolder;Outside Folder</item>
+    </array>
+</resources>

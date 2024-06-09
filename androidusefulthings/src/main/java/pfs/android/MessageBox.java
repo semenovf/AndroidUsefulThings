@@ -48,8 +48,7 @@ public class MessageBox extends DialogFragment
         return builder.create();
     }
 
-    private static void staticShow (FragmentManager fm, String tag
-        , int icon, String title, String text)
+    private static void staticShow (FragmentManager fm, String tag, int icon, String title, String text)
     {
         Bundle args = new Bundle();
         args.putString(TITLE, title);
@@ -60,14 +59,12 @@ public class MessageBox extends DialogFragment
         dialogFragment.show(fm, tag);
     }
 
-    public static void showAlert (FragmentManager fm, String tag
-        , String title, String text)
+    public static void showAlert (FragmentManager fm, String tag, String title, String text)
     {
         staticShow(fm, tag, ALERT_ICON, title, text);
     }
 
-    public static void showInfo (FragmentManager fm, String tag
-        , String title, String text)
+    public static void showInfo (FragmentManager fm, String tag, String title, String text)
     {
         staticShow(fm, tag, INFO_ICON, title, text);
     }

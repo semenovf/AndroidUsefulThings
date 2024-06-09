@@ -1,19 +1,23 @@
-package pfs.android;
+package pfs.android.app;
 
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.ByteArrayOutputStream;
@@ -22,7 +26,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import pfs.android.app.databinding.ActivityMainBinding;
+
+import pfs.android.IntentDumper;
+import pfs.android.KeyboardProvider;
+import pfs.android.MessageBox;
+import pfs.android.OpenDocumentDialog;
+import pfs.android.PermissionsRequester;
+import pfs.android.Say;
+import pfs.android.UriUtils;
 import pfs.android.contentprovider.UnifiedContentProvider;
+import pfs.android.daemon.Daemon;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -60,9 +74,45 @@ public class MainActivity extends AppCompatActivity
                 }
         });
 
+    private boolean startDaemon ()
+    {
+        int rc = Daemon.start(this, MainActivity.class);
+
+        if (rc != Daemon.NO_ERROR) {
+            String message = Daemon.errorString(rc);
+
+            switch (rc) {
+                case Daemon.ERROR_NOTIFICATIONS_DISABLED:
+                    message = message + ".\nEnable them using Settings for this application.";
+                    break;
+                default:
+                    break;
+            }
+
+            MessageBox.showAlert(getFragmentManager(), "MESSAGE_BOX"
+                , getResources().getString(R.string.startDaemonFailure), message);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void stopDaemon ()
+    {
+        Daemon.stop(this);
+    }
+
+    private void finishActivity ()
+    {
+        this.finish();
+    }
+
     @Override
     protected void onCreate (Bundle savedInstanceState)
     {
+        Say.d("Create DaemonActivator: " + IntentDumper.toString(savedInstanceState));
+
         super.onCreate(savedInstanceState);
 
         String[] permissions = new String[] {
@@ -98,9 +148,13 @@ public class MainActivity extends AppCompatActivity
                    WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
 
-        setContentView(R.layout.activity_main);
+        ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
+        //setContentView(R.layout.activity_main);
+        setContentView(binding.getRoot());
 
-        _openFolderButton = findViewById(R.id.open_folder_button);
+        //_openFolderButton = findViewById(R.id.open_folder_button);
+        _openFolderButton = binding.openFolderButton;
+
         _openFolderButton.setEnabled(false);
         _openFolderButton.setOnClickListener(view -> {
             if (_lastUriChosen != null && _lastUriChosen != Uri.EMPTY) {
@@ -141,19 +195,46 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        _openFileButton = findViewById(R.id.open_file_button);
+        //_openFileButton = findViewById(R.id.open_file_button);
+        _openFileButton = binding.openFileButton;
         _openFileButton.setOnClickListener(view -> {
             Say.dtoast(String.format("\"%s\" button clicked", getString(R.string.open_file_button)));
             _openDocumentDialog.launch("*/*");
         });
 
-        ViewGroup rootViewGroup = findViewById(R.id.root_view);
-        EditText editText = findViewById(R.id.edit_text);
+        //ViewGroup rootViewGroup = findViewById(R.id.root_view);
+        ViewGroup rootViewGroup = binding.rootView;
+
+        //EditText editText = findViewById(R.id.edit_text);
+        EditText editText = binding.editText;
+
+        Button startDaemonButton = binding.startDaemonButton;
+        startDaemonButton.setText(R.string.startDaemon);
+        startDaemonButton.setOnClickListener(new View.OnClickListener () {
+            @Override
+            public void onClick (View v) {
+                boolean startRequired = startDaemonButton.getText().toString()
+                    .equals(getString(R.string.startDaemon));
+
+                if (startRequired) {
+                    boolean success = startDaemon();
+
+                    if (success) {
+                        startDaemonButton.setText(R.string.stopDaemon);
+                        //finishActivity();
+                    }
+                } else {
+                    stopDaemon();
+                    startDaemonButton.setText(R.string.startDaemon);
+                }
+            }
+        });
 
         KeyboardProvider.KeyboardObserver keyboardObserver = new KeyboardProvider.KeyboardObserver() {
             @SuppressLint("DefaultLocale")
             @Override
-            public void onKeyboardGeometry(@NonNull KeyboardProvider.KeyboardGeometry geom) {
+            public void onKeyboardGeometry(KeyboardProvider.KeyboardGeometry geom)
+            {
                 Say.d(String.format("GEOMETRY READY:\n"
                     + "\tdisplay resolution=%d x %d\n"
                     + "\tviewAreaTop=%d\n"
@@ -183,8 +264,16 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onNewIntent (Intent intent)
+    {
+        Say.d("------ New intent -------");
+        super.onNewIntent(intent);
+    }
+
+    @Override
     protected void onDestroy ()
     {
+        Say.d("Destroy DaemonActivator");
         super.onDestroy();
 
         // Avoid exception:
